@@ -137,7 +137,7 @@ namespace Hoge
             /// <summary>
             /// ワークファイル 排他オープン
             /// </summary>
-            private StreamWriter OpenWorkFile(string filename, Encoding encoding, out FileStream stream)
+            private StreamWriter? OpenWorkFile(string filename, Encoding encoding, out FileStream? stream)
             {
                 // RDPの場合、GetTmpPath は、序数（1, 2 など）サブフォルダが付与されます。
                 // この序数サブフォルダは、RDPセッション終了で削除されてしまいます。
