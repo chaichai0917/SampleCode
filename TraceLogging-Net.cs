@@ -151,7 +151,7 @@ namespace Hoge
 
                     try
                     {
-                        // 排他オープンのため、まずは FireStream 生成
+                        // 排他オープンのため、まずは FileStream 生成
                         stream = new FileStream(workpath, FileMode.Create, FileAccess.Write, FileShare.None);
                         StreamWriter writer = new StreamWriter(stream, encoding);
                         return writer;
