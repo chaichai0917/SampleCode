@@ -66,7 +66,7 @@ namespace Hoge
                 string progname = Process.GetCurrentProcess().ProcessName;
                 string terminal = GetTerminalName();
 
-                // 同一 Windows ユーザーでRDP運用を考えてファイル名に端末名も付与
+                // RDP運用を考慮して端末名を付与
                 string filename = string.Format("{0}-{1}.log", progname, terminal);
 
                 // ワークファイル 排他オープン
@@ -139,25 +139,21 @@ namespace Hoge
             /// </summary>
             private StreamWriter OpenWorkFile(string filename, Encoding encoding, out FileStream stream)
             {
-                // RDPの場合、GetTmpPath() はセッション付きフォルダとなるが、
-                // セッション付きフォルダが存在しない場合も考慮
-                string[] tmpdir = {
-                    Path.GetTempPath(),
-                    JoinFilePath(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp") };
+                // RDPの場合、GetTmpPath は、序数（1, 2 など）サブフォルダが付与されます。
+                // この序数サブフォルダは、RDPセッション終了で削除されてしまいます。
+                // このため序数抜きのフォルダを GetFolderPath で取得します。
+                string tmpdir = JoinFilePath(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp");
+                string workpath = JoinFilePath(tmpdir, filename);
 
-                foreach (string tmp in tmpdir)
+                try
                 {
-                    string workpath = JoinFilePath(tmp, filename);
-
-                    try
-                    {
-                        // 排他オープンのため、まずは FileStream 生成
-                        stream = new FileStream(workpath, FileMode.Create, FileAccess.Write, FileShare.None);
-                        StreamWriter writer = new StreamWriter(stream, encoding);
-                        return writer;
-                    }
-                    catch { /* NOP */ }
+                    // 排他オープンのため、まずは FileStream 生成
+                    stream = new FileStream(workpath, FileMode.Create, FileAccess.Write, FileShare.None);
+                    StreamWriter writer = new StreamWriter(stream, encoding);
+                    return writer;
                 }
+                catch { /* NOP */ }
+
                 stream = null;
                 return null;
             }
