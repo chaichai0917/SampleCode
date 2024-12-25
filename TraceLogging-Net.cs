@@ -24,7 +24,7 @@ namespace Hoge
     public static class TraceLogging
     {
         #region プロパティ
-        public static TraceLogObject LogObj { get; set; }  // トレースログ本体
+        public static TraceLogObject? LogObj { get; set; }  // トレースログ本体
         #endregion
 
         #region 前処理/後処理
@@ -53,8 +53,8 @@ namespace Hoge
         public class TraceLogObject
         {
             #region 内部変数
-            private FileStream Stream = null; 
-            private StreamWriter Writer = null;
+            private FileStream? Stream = null; 
+            private StreamWriter? Writer = null;
             #endregion
 
             #region 生成/消滅
@@ -137,7 +137,7 @@ namespace Hoge
             /// <summary>
             /// ワークファイル 排他オープン
             /// </summary>
-            private StreamWriter OpenWorkFile(string filename, Encoding encoding, out FileStream stream)
+            private StreamWriter? OpenWorkFile(string filename, Encoding encoding, out FileStream? stream)
             {
                 // RDPの場合、GetTmpPath() はセッション付きフォルダとなるが、
                 // セッション付きフォルダが存在しない場合も考慮
@@ -189,7 +189,7 @@ namespace Hoge
         /// </summary>
         public static string GetTerminalName()
         {
-            string name = null;
+            string? name = null;
 
             // RDP接続元の端末名
             try
