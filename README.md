@@ -1,4 +1,5 @@
 C# Sample Code
 
-TraceLogging.cs - トレースログ（.NET Framework）
-TraceLogging-Net.cs - トレースログ（.NET）
+- トレースログ
+  - TraceLogging.cs （.NET Framework）
+  - TraceLogging-Net.cs （.NET）
