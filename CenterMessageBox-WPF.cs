@@ -1,15 +1,22 @@
 ﻿//------------------------------------------------------------------------------
-// MessageBox - 親画面中央表示とXボタン非表示（Windows Forms）
+// MessageBox - 親画面中央表示とXボタン非表示（WPF）
 //------------------------------------------------------------------------------
 // [NOTE] 
 //   親画面中央表示は、下記情報を利用
 //   https://millyc.hatenadiary.org/entry/20080312/1205311545
 //
+//   Xボタン非表示
+//   Windows Server 系で、Xボタンディセーブルが視認できないため
+//
+//   Windows Forms → WPF
+//
 //------------------------------------------------------------------------------
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Interop;
+
 
 namespace MyTools
 {
@@ -96,49 +103,49 @@ namespace MyTools
 
         #region static methods
 
-        public static DialogResult Show(IWin32Window owner, string text)
+        public static MessageBoxResult Show(Window owner, string text)
         {
-            return Show(owner, text, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
+            return Show(owner, text, string.Empty, MessageBoxButton.OK, MessageBoxImage.None, MessageBoxResult.None);
         }
 
-        public static DialogResult Show(IWin32Window owner, string text, string caption)
+        public static MessageBoxResult Show(Window owner, string text, string caption)
         {
-            return Show(owner, text, caption, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
+            return Show(owner, text, caption, MessageBoxButton.OK, MessageBoxImage.None, MessageBoxResult.None);
         }
 
-        public static DialogResult Show(IWin32Window owner, string text, string caption, MessageBoxButtons buttons)
+        public static MessageBoxResult Show(Window owner, string text, string caption, MessageBoxButton buttons)
         {
-            return Show(owner, text, caption, buttons, MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
+            return Show(owner, text, caption, buttons, MessageBoxImage.None, MessageBoxResult.None);
         }
 
-        public static DialogResult Show(IWin32Window owner, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icon)
+        public static MessageBoxResult Show(Window owner, string text, string caption, MessageBoxButton buttons, MessageBoxImage icon)
         {
-            return Show(owner, text, caption, buttons, icon, MessageBoxDefaultButton.Button1);
+            return Show(owner, text, caption, buttons, icon, MessageBoxResult.None);
         }
 
-        public static DialogResult Show(IWin32Window owner, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icon, MessageBoxDefaultButton defaultButton)
+        public static MessageBoxResult Show(Window owner, string text, string caption, MessageBoxButton buttons, MessageBoxImage icon, MessageBoxResult defaultResult)
         {
             if (null == owner)
             {
                 throw new ArgumentNullException("owner");
             }
             CenterMessageBox messageBox = new CenterMessageBox(owner);
-            return messageBox.Show(text, caption, buttons, icon, defaultButton);
+            return messageBox.Show(text, caption, buttons, icon, defaultResult);
         }
 
         #endregion
 
         #region fields
 
-        private readonly IWin32Window Owner;
+        private readonly Window Owner;
         private IntPtr HookHandle = IntPtr.Zero;
-        private MessageBoxButtons HookButtons;     // Xボタン非表示
+        private MessageBoxButton HookButtons;     // Xボタン非表示
 
         #endregion
 
         #region constructors
 
-        private CenterMessageBox(IWin32Window owner)
+        private CenterMessageBox(Window owner)
         {
             this.Owner = owner;
         }
@@ -147,19 +154,20 @@ namespace MyTools
 
         #region methods
 
-        private DialogResult Show(
+        private MessageBoxResult Show(
             string text,
             string caption,
-            MessageBoxButtons buttons,
-            MessageBoxIcon icon,
-            MessageBoxDefaultButton defaultButton)
+            MessageBoxButton buttons,
+            MessageBoxImage icon,
+            MessageBoxResult defaultResult)
         {
-            IntPtr hInstance = NativeMethods.GetWindowLong(this.Owner.Handle, NativeMethods.GWL_HINSTANCE);
+            HwndSource hwndSource = (HwndSource)HwndSource.FromVisual(Owner);
+            IntPtr hInstance = NativeMethods.GetWindowLong(hwndSource.Handle, NativeMethods.GWL_HINSTANCE);
             IntPtr threadId = NativeMethods.GetCurrentThreadId();
             this.HookHandle = NativeMethods.SetWindowsHookEx(NativeMethods.WH_CBT, this.HookProc, hInstance, threadId);
             this.HookButtons = buttons;  // Xボタン無効化
 
-            return MessageBox.Show(this.Owner, text, caption, buttons, icon, defaultButton);
+            return MessageBox.Show(this.Owner, text, caption, buttons, icon, defaultResult);
         }
 
         private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
@@ -169,35 +177,35 @@ namespace MyTools
                 NativeMethods.RECT ownerRect;
                 NativeMethods.RECT msgBoxRect;
 
-                NativeMethods.GetWindowRect(this.Owner.Handle, out ownerRect);
+                HwndSource hwndSource = (HwndSource)HwndSource.FromVisual(Owner);
+                NativeMethods.GetWindowRect(hwndSource.Handle, out ownerRect);
                 NativeMethods.GetWindowRect(wParam, out msgBoxRect);
                 int x = ownerRect.Left + (ownerRect.Width - msgBoxRect.Width) / 2;
                 int y = ownerRect.Top + (ownerRect.Height - msgBoxRect.Height) / 2;
 
-                Rectangle workingArea = Screen.GetWorkingArea(ownerRect.ToRectangle());
+                Rect workingArea = SystemParameters.WorkArea;
                 if (workingArea.Bottom < y + msgBoxRect.Height)
                 {
-                    y = workingArea.Bottom - msgBoxRect.Height;
+                    y = (int)workingArea.Bottom - msgBoxRect.Height;
                 }
                 if (workingArea.Right < x + msgBoxRect.Width)
                 {
-                    x = workingArea.Right - msgBoxRect.Width;
+                    x = (int)workingArea.Right - msgBoxRect.Width;
                 }
                 if (y < workingArea.Top)
                 {
-                    y = workingArea.Top;
+                    y = (int)workingArea.Top;
                 }
                 if (x < workingArea.Left)
                 {
-                    x = workingArea.Left;
+                    x = (int)workingArea.Left;
                 }
 
                 NativeMethods.SetWindowPos(wParam, 0, x, y, 0, 0,
                     NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
 
                 // Xボタン非表示
-                if ((this.HookButtons == MessageBoxButtons.YesNo)
-                 || (this.HookButtons == MessageBoxButtons.AbortRetryIgnore))
+                if (this.HookButtons == MessageBoxButton.YesNo)
                 {
                     long style = (long)NativeMethods.GetWindowLong(wParam, NativeMethods.GWL_STYLE);
                     NativeMethods.SetWindowLong(wParam, NativeMethods.GWL_STYLE, style & ~NativeMethods.WS_SYSMENU);
@@ -220,3 +228,4 @@ namespace MyTools
         #endregion
     }
 }
+
